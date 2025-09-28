@@ -118,53 +118,53 @@ public function init_form_fields() {
  * Generate WhatsApp message
  */
 private function generate_whatsapp_message( $order ) {
+    $order_items = $order->get_items();
     $website_name = get_bloginfo('name');
     $website_url = get_site_url();
     
-    // Get message template from settings
-    $message_template = $this->get_option( 'message_template', 
-        "Halo, saya ingin memesan dari {website_name}:\n\n{order_items}\n\nTotal: {total}\nOrder ID: {order_id}\nNama: {customer_name}\nTelepon: {customer_phone}\nAlamat: {customer_address}"
-    );
+    // Build message dengan newline normal
+    $message = "Halo, saya ingin memesan dari *{$website_name}*:\n\n";
     
-    // Build order items
-    $order_items_text = "";
-    foreach ( $order->get_items() as $item ) {
+    foreach ( $order_items as $item ) {
         $product_name = $item->get_name();
         $quantity = $item->get_quantity();
         $total = $item->get_total();
         $formatted_total = number_format( $total, 0, ',', '.' );
         
-        $order_items_text .= "• {$product_name} x{$quantity} - Rp {$formatted_total}\n";
+        $message .= "• {$product_name} x{$quantity} - Rp {$formatted_total}\n";
     }
     
-    // Replace placeholders
-    $message = str_replace(
-        array(
-            '{website_name}',
-            '{website_url}', 
-            '{order_id}',
-            '{customer_name}',
-            '{customer_phone}',
-            '{customer_email}',
-            '{customer_address}',
-            '{total}',
-            '{order_items}'
-        ),
-        array(
-            $website_name,
-            $website_url,
-            $order->get_order_number(),
-            $order->get_billing_first_name() . ' ' . $order->get_billing_last_name(),
-            $order->get_billing_phone(),
-            $order->get_billing_email(),
-            $order->get_billing_address_1(),
-            'Rp ' . number_format( $order->get_total(), 0, ',', '.' ),
-            $order_items_text
-        ),
-        $message_template
-    );
+    $order_total = $order->get_total();
+    $formatted_order_total = number_format( $order_total, 0, ',', '.' );
     
-    return urlencode( $message );
+    $message .= "\n💰 *Total: Rp {$formatted_order_total}*\n";
+    $message .= "\n📦 *Detail Order:*\n";
+    $message .= "🆔 Order ID: " . $order->get_order_number() . "\n";
+    $message .= "🌐 Website: {$website_url}\n";
+    
+    $message .= "\n👤 *Data Customer:*\n";
+    $message .= "📛 Nama: " . $order->get_billing_first_name() . " " . $order->get_billing_last_name() . "\n";
+    $message .= "📧 Email: " . $order->get_billing_email() . "\n";
+    $message .= "📞 Telepon: " . $order->get_billing_phone() . "\n";
+    $message .= "🏠 Alamat: " . $order->get_billing_address_1();
+    
+    // Convert untuk WhatsApp
+    $message = $this->format_message_for_whatsapp( $message );
+    
+    return $message;
+}
+
+/**
+ * Format message untuk WhatsApp API
+ */
+private function format_message_for_whatsapp( $message ) {
+    // Encode karakter khusus untuk URL
+    $encoded_message = rawurlencode( $message );
+    
+    // WhatsApp membutuhkan %0A untuk newline, bukan %0D%0A
+    $encoded_message = str_replace( "%0D%0A", "%0A", $encoded_message );
+    
+    return $encoded_message;
 }
 
 /**
