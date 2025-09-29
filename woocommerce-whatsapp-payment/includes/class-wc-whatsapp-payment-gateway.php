@@ -122,8 +122,8 @@ private function generate_whatsapp_message( $order ) {
     $website_name = get_bloginfo('name');
     $website_url = get_site_url();
     
-    // Build message dengan newline normal
-    $message = "Halo, saya ingin memesan dari *{$website_name}*:\n\n";
+    // Gunakan %0A untuk newline di WhatsApp
+    $message = "Halo, saya ingin memesan dari *{$website_name}*:%0A%0A";
     
     foreach ( $order_items as $item ) {
         $product_name = $item->get_name();
@@ -131,26 +131,26 @@ private function generate_whatsapp_message( $order ) {
         $total = $item->get_total();
         $formatted_total = number_format( $total, 0, ',', '.' );
         
-        $message .= "• {$product_name} x{$quantity} - Rp {$formatted_total}\n";
+        $message .= "• {$product_name} x{$quantity} - Rp {$formatted_total}%0A";
     }
     
     $order_total = $order->get_total();
     $formatted_order_total = number_format( $order_total, 0, ',', '.' );
     
-    $message .= "\n💰 *Total: Rp {$formatted_order_total}*\n";
-    $message .= "\n📦 *Detail Order:*\n";
-    $message .= "🆔 Order ID: " . $order->get_order_number() . "\n";
-    $message .= "🌐 Website: {$website_url}\n";
+    $message .= "%0A💰 *Total: Rp {$formatted_order_total}*%0A";
+    $message .= "%0A📦 *Detail Order:*%0A";
+    $message .= "🆔 Order ID: " . $order->get_order_number() . "%0A";
+    $message .= "🌐 Website: {$website_url}%0A";
     
-    $message .= "\n👤 *Data Customer:*\n";
-    $message .= "📛 Nama: " . $order->get_billing_first_name() . " " . $order->get_billing_last_name() . "\n";
-    $message .= "📧 Email: " . $order->get_billing_email() . "\n";
-    $message .= "📞 Telepon: " . $order->get_billing_phone() . "\n";
-    $message .= "🏠 Alamat: " . $order->get_billing_address_1();
+    $message .= "%0A👤 *Data Customer:*%0A";
+    $message .= "📛 Nama: " . $order->get_billing_first_name() . " " . $order->get_billing_last_name() . "%0A";
+    $message .= "📧 Email: " . $order->get_billing_email() . "%0A";
+    $message .= "📞 Telepon: " . $order->get_billing_phone() . "%0A";
+    $message .= "🏠 Alamat: " . $order->get_billing_address_1() . "%0A";
     
-    // Convert untuk WhatsApp
-    $message = $this->format_message_for_whatsapp( $message );
+    $message .= "%0A_*Terima kasih atas pesanannya!*_";
     
+    // JANGAN gunakan urlencode() lagi karena sudah pakai %0A
     return $message;
 }
 
