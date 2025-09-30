@@ -36,6 +36,10 @@ class WC_WhatsApp_Payment_Gateway extends WC_Payment_Gateway {
         add_action( 'woocommerce_update_options_payment_gateways_' . $this->id, array( $this, 'process_admin_options' ) );
         add_action( 'woocommerce_thankyou_' . $this->id, array( $this, 'thankyou_page' ) );
         
+        // ========== TAMBAHKAN HOOK UNTUK ORDER DETAILS ========== //
+        add_action( 'woocommerce_order_details_after_order_table', array( $this, 'display_whatsapp_button_order_details' ), 10, 1 );
+        // ======================================================== //
+        
         // Customer emails
         add_action( 'woocommerce_email_before_order_table', array( $this, 'email_instructions' ), 10, 3 );
     }
@@ -76,7 +80,7 @@ class WC_WhatsApp_Payment_Gateway extends WC_Payment_Gateway {
                 'title'       => __( 'Instructions', 'wc-whatsapp-payment' ),
                 'type'        => 'textarea',
                 'description' => __( 'Instructions that will be added to the thank you page and emails.', 'wc-whatsapp-payment' ),
-                'default'     => __( 'Please contact us via WhatsApp to complete your payment. Our WhatsApp number: ' . $this->whatsapp_number, 'wc-whatsapp-payment' ),
+                'default'     => __( 'Please contact us via WhatsApp to complete your payment.', 'wc-whatsapp-payment' ),
                 'desc_tip'    => true,
             ),
         );
@@ -116,21 +120,30 @@ class WC_WhatsApp_Payment_Gateway extends WC_Payment_Gateway {
      */
     private function generate_whatsapp_message( $order ) {
         $order_items = $order->get_items();
-        $message = "Halo, saya ingin memesan:\n\n";
+        $website_name = get_bloginfo('name');
+        
+        $message = "Halo, saya ingin memesan dari {$website_name}:%0A%0A";
         
         foreach ( $order_items as $item ) {
-            $product = $item->get_product();
-            $message .= "• " . $item->get_name() . " x" . $item->get_quantity() . " - " . wc_price( $item->get_total() ) . "\n";
+            $product_name = $item->get_name();
+            $quantity = $item->get_quantity();
+            $total = $item->get_total();
+            $formatted_total = number_format( $total, 0, ',', '.' );
+            
+            $message .= "• {$product_name} x{$quantity} - Rp {$formatted_total}%0A";
         }
         
-        $message .= "\nTotal: " . wc_price( $order->get_total() );
-        $message .= "\n\nOrder ID: " . $order->get_order_number();
-        $message .= "\nNama: " . $order->get_billing_first_name() . " " . $order->get_billing_last_name();
-        $message .= "\nEmail: " . $order->get_billing_email();
-        $message .= "\nTelepon: " . $order->get_billing_phone();
-        $message .= "\nAlamat: " . $order->get_billing_address_1();
+        $order_total = $order->get_total();
+        $formatted_order_total = number_format( $order_total, 0, ',', '.' );
         
-        return urlencode( $message );
+        $message .= "%0ATotal: Rp {$formatted_order_total}";
+        $message .= "%0AOrder ID: " . $order->get_order_number();
+        $message .= "%0ANama: " . $order->get_billing_first_name() . " " . $order->get_billing_last_name();
+        $message .= "%0AEmail: " . $order->get_billing_email();
+        $message .= "%0ATelepon: " . $order->get_billing_phone();
+        $message .= "%0AAlamat: " . $order->get_billing_address_1();
+        
+        return $message;
     }
 
     /**
@@ -155,6 +168,49 @@ class WC_WhatsApp_Payment_Gateway extends WC_Payment_Gateway {
         
         if ( $this->instructions ) {
             echo wpautop( wptexturize( $this->instructions ) );
+        }
+    }
+
+    /**
+     * Display WhatsApp button on order details page
+     */
+    public function display_whatsapp_button_order_details( $order_id ) {
+        $order = wc_get_order( $order_id );
+        
+        // Only show for WhatsApp payment method
+        if ( $order->get_payment_method() !== $this->id ) {
+            return;
+        }
+        
+        // Only show for specific statuses (pending, on-hold, failed)
+        $allowed_statuses = array( 'pending', 'on-hold', 'failed', 'checkout-draft' );
+        if ( ! in_array( $order->get_status(), $allowed_statuses ) ) {
+            return;
+        }
+        
+        $whatsapp_number = $this->whatsapp_number;
+        $message = $order->get_meta( '_whatsapp_payment_message' );
+        
+        // Generate message if not exists
+        if ( ! $message ) {
+            $message = $this->generate_whatsapp_message( $order );
+            $order->update_meta_data( '_whatsapp_payment_message', $message );
+            $order->save();
+        }
+        
+        if ( $message && $whatsapp_number ) {
+            $whatsapp_url = 'https://wa.me/' . $whatsapp_number . '?text=' . $message;
+            
+            echo '<div class="woocommerce-whatsapp-payment-order-details" style="background: #f8f8f8; padding: 20px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #25D366;">';
+            echo '<h3>' . __( 'Complete Your Payment via WhatsApp', 'wc-whatsapp-payment' ) . '</h3>';
+            echo '<p>' . __( 'You haven\'t completed your payment yet. Click the button below to contact us via WhatsApp and complete your payment:', 'wc-whatsapp-payment' ) . '</p>';
+            echo '<a href="' . esc_url( $whatsapp_url ) . '" target="_blank" class="button alt" style="background: #25D366; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; border: none;">';
+            echo __( '💬 Chat via WhatsApp to Pay', 'wc-whatsapp-payment' );
+            echo '</a>';
+            echo '<p style="margin-top: 10px; font-size: 0.9em; color: #666;">';
+            echo __( 'If you already paid via WhatsApp, please wait for confirmation.', 'wc-whatsapp-payment' );
+            echo '</p>';
+            echo '</div>';
         }
     }
 
