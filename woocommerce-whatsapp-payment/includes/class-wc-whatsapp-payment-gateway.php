@@ -20,7 +20,14 @@ class WC_WhatsApp_Payment_Gateway extends WC_Payment_Gateway {
         $this->has_fields         = false;
         $this->method_title       = __( 'WhatsApp Payment', 'wc-whatsapp-payment' );
         $this->method_description = __( 'Allow customers to pay via WhatsApp', 'wc-whatsapp-payment' );
-        $this->supports           = array( 'products' );
+        
+        // ========== PERBAIKI INI: UPDATE SUPPORTS ARRAY ========== //
+        $this->supports = array(
+            'products',
+            // HPOS compatibility - tambahkan refunds jika mau support
+            // 'refunds',
+        );
+        // ========== END OF UPDATE ========== //
 
         // Load the settings
         $this->init_form_fields();

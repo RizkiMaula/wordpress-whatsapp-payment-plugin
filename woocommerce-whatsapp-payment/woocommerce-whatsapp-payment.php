@@ -2,8 +2,8 @@
 /**
  * Plugin Name: WooCommerce WhatsApp Payment
  * Plugin URI: https://example.com
- * Description: Custom payment gateway for WhatsApp payments
- * Version: 1.0.0
+ * Description: Custom payment gateway for WhatsApp payments - HPOS Compatible
+ * Version: 1.1.0
  * Author: Violet Gallery
  * Author URI: https://violetgalleryofficial.com
  * Text Domain: wc-whatsapp-payment
@@ -16,12 +16,21 @@
  * @package WooCommerce_WhatsApp_Payment
  */
 
+// ========== TAMBAHKAN INI: HPOS COMPATIBILITY DECLARATION ========== //
 defined( 'ABSPATH' ) || exit;
 
 // Define plugin constants
-define( 'WC_WHATSAPP_PAYMENT_VERSION', '1.0.0' );
+define( 'WC_WHATSAPP_PAYMENT_VERSION', '1.1.0' );
 define( 'WC_WHATSAPP_PAYMENT_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'WC_WHATSAPP_PAYMENT_PLUGIN_PATH', plugin_dir_path( __FILE__ ) );
+
+// HPOS Compatibility Declaration
+add_action( 'before_woocommerce_init', function() {
+    if ( class_exists( \Automattic\WooCommerce\Utilities\FeaturesUtil::class ) ) {
+        \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility( 'custom_order_tables', __FILE__, true );
+    }
+} );
+// ========== END OF HPOS COMPATIBILITY ========== //
 
 // Check if WooCommerce is active
 add_action( 'plugins_loaded', 'wc_whatsapp_payment_init' );
