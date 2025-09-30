@@ -4,8 +4,8 @@
  * Plugin URI: https://example.com
  * Description: Custom payment gateway for WhatsApp payments
  * Version: 1.0.0
- * Author: Violet Gallery
- * Author URI: https://violetgalleryofficial.com
+ * Author: Your Name
+ * Author URI: https://example.com
  * Text Domain: wc-whatsapp-payment
  * Domain Path: /languages
  * Requires at least: 5.0

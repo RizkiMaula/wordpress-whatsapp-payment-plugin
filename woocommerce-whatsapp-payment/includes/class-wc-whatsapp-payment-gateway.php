@@ -43,44 +43,44 @@ class WC_WhatsApp_Payment_Gateway extends WC_Payment_Gateway {
     /**
      * Initialize Gateway Settings Form Fields
      */
-public function init_form_fields() {
-    $this->form_fields = array(
-        'enabled' => array(
-            'title'   => __( 'Enable/Disable', 'wc-whatsapp-payment' ),
-            'type'    => 'checkbox',
-            'label'   => __( 'Enable WhatsApp Payment', 'wc-whatsapp-payment' ),
-            'default' => 'yes'
-        ),
-        'title' => array(
-            'title'       => __( 'Title', 'wc-whatsapp-payment' ),
-            'type'        => 'text',
-            'description' => __( 'This controls the title which the user sees during checkout.', 'wc-whatsapp-payment' ),
-            'default'     => __( 'WhatsApp Payment', 'wc-whatsapp-payment' ),
-            'desc_tip'    => true,
-        ),
-        'whatsapp_number' => array(
-            'title'       => __( 'WhatsApp Number', 'wc-whatsapp-payment' ),
-            'type'        => 'text',
-            'description' => __( 'Enter your WhatsApp number with country code (e.g., 6281234567890)', 'wc-whatsapp-payment' ),
-            'default'     => '',
-            'desc_tip'    => true,
-        ),
-        'message_template' => array(
-            'title'       => __( 'Message Template', 'wc-whatsapp-payment' ),
-            'type'        => 'textarea',
-            'description' => __( 'Customize the WhatsApp message template. Use {website_name}, {order_id}, {customer_name}, {total}', 'wc-whatsapp-payment' ),
-            'default'     => __( 'Halo, saya ingin memesan dari {website_name}:\n\n{order_items}\n\nTotal: {total}\nOrder ID: {order_id}\nNama: {customer_name}\nTelepon: {customer_phone}\nAlamat: {customer_address}', 'wc-whatsapp-payment' ),
-            'desc_tip'    => true,
-        ),
-        'description' => array(
-            'title'       => __( 'Description', 'wc-whatsapp-payment' ),
-            'type'        => 'textarea',
-            'description' => __( 'Payment method description that the customer will see on your checkout.', 'wc-whatsapp-payment' ),
-            'default'     => __( 'Pay via WhatsApp. You will be redirected to WhatsApp to complete your payment.', 'wc-whatsapp-payment' ),
-            'desc_tip'    => true,
-        ),
-    );
-}
+    public function init_form_fields() {
+        $this->form_fields = array(
+            'enabled' => array(
+                'title'   => __( 'Enable/Disable', 'wc-whatsapp-payment' ),
+                'type'    => 'checkbox',
+                'label'   => __( 'Enable WhatsApp Payment', 'wc-whatsapp-payment' ),
+                'default' => 'yes'
+            ),
+            'title' => array(
+                'title'       => __( 'Title', 'wc-whatsapp-payment' ),
+                'type'        => 'text',
+                'description' => __( 'This controls the title which the user sees during checkout.', 'wc-whatsapp-payment' ),
+                'default'     => __( 'WhatsApp Payment', 'wc-whatsapp-payment' ),
+                'desc_tip'    => true,
+            ),
+            'whatsapp_number' => array(
+                'title'       => __( 'WhatsApp Number', 'wc-whatsapp-payment' ),
+                'type'        => 'text',
+                'description' => __( 'Enter your WhatsApp number with country code (e.g., 6281234567890)', 'wc-whatsapp-payment' ),
+                'default'     => '',
+                'desc_tip'    => true,
+            ),
+            'description' => array(
+                'title'       => __( 'Description', 'wc-whatsapp-payment' ),
+                'type'        => 'textarea',
+                'description' => __( 'Payment method description that the customer will see on your checkout.', 'wc-whatsapp-payment' ),
+                'default'     => __( 'Pay via WhatsApp. You will be redirected to WhatsApp to complete your payment.', 'wc-whatsapp-payment' ),
+                'desc_tip'    => true,
+            ),
+            'instructions' => array(
+                'title'       => __( 'Instructions', 'wc-whatsapp-payment' ),
+                'type'        => 'textarea',
+                'description' => __( 'Instructions that will be added to the thank you page and emails.', 'wc-whatsapp-payment' ),
+                'default'     => __( 'Please contact us via WhatsApp to complete your payment. Our WhatsApp number: ' . $this->whatsapp_number, 'wc-whatsapp-payment' ),
+                'desc_tip'    => true,
+            ),
+        );
+    }
 
     /**
      * Process the payment
@@ -114,67 +114,24 @@ public function init_form_fields() {
     /**
      * Generate WhatsApp message
      */
-/**
- * Generate WhatsApp message
- */
-private function generate_whatsapp_message( $order ) {
-    $order_items = $order->get_items();
-    $website_name = get_bloginfo('name');
-    $website_url = get_site_url();
-    
-    // Gunakan %0A untuk newline di WhatsApp
-    $message = "Halo, saya ingin memesan dari *{$website_name}*:%0A%0A";
-    
-    foreach ( $order_items as $item ) {
-        $product_name = $item->get_name();
-        $quantity = $item->get_quantity();
-        $total = $item->get_total();
-        $formatted_total = number_format( $total, 0, ',', '.' );
+    private function generate_whatsapp_message( $order ) {
+        $order_items = $order->get_items();
+        $message = "Halo, saya ingin memesan:\n\n";
         
-        $message .= "• {$product_name} x{$quantity} - Rp {$formatted_total}%0A";
+        foreach ( $order_items as $item ) {
+            $product = $item->get_product();
+            $message .= "• " . $item->get_name() . " x" . $item->get_quantity() . " - " . wc_price( $item->get_total() ) . "\n";
+        }
+        
+        $message .= "\nTotal: " . wc_price( $order->get_total() );
+        $message .= "\n\nOrder ID: " . $order->get_order_number();
+        $message .= "\nNama: " . $order->get_billing_first_name() . " " . $order->get_billing_last_name();
+        $message .= "\nEmail: " . $order->get_billing_email();
+        $message .= "\nTelepon: " . $order->get_billing_phone();
+        $message .= "\nAlamat: " . $order->get_billing_address_1();
+        
+        return urlencode( $message );
     }
-    
-    $order_total = $order->get_total();
-    $formatted_order_total = number_format( $order_total, 0, ',', '.' );
-    
-    $message .= "%0A💰 *Total: Rp {$formatted_order_total}*%0A";
-    $message .= "%0A📦 *Detail Order:*%0A";
-    $message .= "🆔 Order ID: " . $order->get_order_number() . "%0A";
-    $message .= "🌐 Website: {$website_url}%0A";
-    
-    $message .= "%0A👤 *Data Customer:*%0A";
-    $message .= "📛 Nama: " . $order->get_billing_first_name() . " " . $order->get_billing_last_name() . "%0A";
-    $message .= "📧 Email: " . $order->get_billing_email() . "%0A";
-    $message .= "📞 Telepon: " . $order->get_billing_phone() . "%0A";
-    $message .= "🏠 Alamat: " . $order->get_billing_address_1() . "%0A";
-    
-    $message .= "%0A_*Terima kasih atas pesanannya!*_";
-    
-    // JANGAN gunakan urlencode() lagi karena sudah pakai %0A
-    return $message;
-}
-
-/**
- * Format message untuk WhatsApp API
- */
-private function format_message_for_whatsapp( $message ) {
-    // Encode karakter khusus untuk URL
-    $encoded_message = rawurlencode( $message );
-    
-    // WhatsApp membutuhkan %0A untuk newline, bukan %0D%0A
-    $encoded_message = str_replace( "%0D%0A", "%0A", $encoded_message );
-    
-    return $encoded_message;
-}
-
-/**
- * Format price without HTML tags
- */
-private function format_price_clean( $price ) {
-    // Clean number formatting tanpa HTML
-    $clean_price = number_format( $price, 0, ',', '.' );
-    return $clean_price;
-}
 
     /**
      * Output for the order received page.
