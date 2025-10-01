@@ -137,18 +137,18 @@ class WC_WhatsApp_Payment_Gateway extends WC_Payment_Gateway {
             $total = $item->get_total();
             $formatted_total = number_format( $total, 0, ',', '.' );
             
-            $message .= "• {$product_name} x{$quantity} - Rp {$formatted_total}%0A";
+            $message .= "• {$product_name} x{$quantity} - Rp {$formatted_total}%0A ";
         }
         
         $order_total = $order->get_total();
         $formatted_order_total = number_format( $order_total, 0, ',', '.' );
         
-        $message .= "%0ATotal: Rp {$formatted_order_total}";
-        $message .= "%0AOrder ID: " . $order->get_order_number();
-        $message .= "%0ANama: " . $order->get_billing_first_name() . " " . $order->get_billing_last_name();
-        $message .= "%0AEmail: " . $order->get_billing_email();
-        $message .= "%0ATelepon: " . $order->get_billing_phone();
-        $message .= "%0AAlamat: " . $order->get_billing_address_1();
+        $message .= " Total: Rp {$formatted_order_total} ";
+        $message .= " Order ID: " . $order->get_order_number();
+        $message .= " Nama: " . $order->get_billing_first_name() . " " . $order->get_billing_last_name();
+        $message .= " Email: " . $order->get_billing_email();
+        $message .= " Telepon: " . $order->get_billing_phone();
+        $message .= " Alamat: " . $order->get_billing_address_1();
         
         return $message;
     }
