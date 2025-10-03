@@ -123,35 +123,212 @@ class WC_WhatsApp_Payment_Gateway extends WC_Payment_Gateway {
     }
 
     /**
-     * Generate WhatsApp message
-     */
-    private function generate_whatsapp_message( $order ) {
-        $order_items = $order->get_items();
-        $website_name = get_bloginfo('name');
+ * Generate WhatsApp message dengan fix karakter khusus
+ */
+private function generate_whatsapp_message( $order ) {
+    $order_items = $order->get_items();
+    $website_name = get_bloginfo('name');
+    
+    // Build pesan dengan format normal
+    $message = "Halo, saya ingin memesan dari {$website_name}:\n\n";
+    
+    foreach ( $order_items as $item_id => $item ) {
+        $product_name = $item->get_name();
+        $quantity = $item->get_quantity();
+        $total = $item->get_total();
+        $formatted_total = number_format( $total, 0, ',', '.' );
         
-        $message = "Halo, saya ingin memesan dari {$website_name}:%0A%0A";
+        $message .= "• {$product_name} x{$quantity} - Rp {$formatted_total}\n";
         
-        foreach ( $order_items as $item ) {
-            $product_name = $item->get_name();
-            $quantity = $item->get_quantity();
-            $total = $item->get_total();
-            $formatted_total = number_format( $total, 0, ',', '.' );
-            
-            $message .= "• {$product_name} x{$quantity} - Rp {$formatted_total}%0A ";
+        // Tampilkan variant product
+        $variation_data = $this->get_product_variation_data( $item );
+        if ( ! empty( $variation_data ) ) {
+            foreach ( $variation_data as $variant ) {
+                $message .= "  └─ {$variant}\n";
+            }
+        }
+    }
+    
+    $order_total = $order->get_total();
+    $formatted_order_total = number_format( $order_total, 0, ',', '.' );
+    
+    $message .= "\n💰 *Total: Rp {$formatted_order_total}*";
+    $message .= "\n\n📦 *Detail Order:*";
+    $message .= "\n🆔 Order ID: " . $order->get_order_number();
+    $message .= "\n🌐 Website: " . get_site_url();
+    
+    $message .= "\n\n👤 *Data Customer:*";
+    $message .= "\n📛 Nama: " . $order->get_billing_first_name() . " " . $order->get_billing_last_name();
+    $message .= "\n📧 Email: " . $order->get_billing_email();
+    $message .= "\n📞 Telepon: " . $order->get_billing_phone();
+    $message .= "\n🏠 Alamat: " . $order->get_billing_address_1();
+    
+    if ( $order->get_billing_city() ) {
+        $message .= "\n🏙️ Kota: " . $order->get_billing_city();
+    }
+    if ( $order->get_billing_state() ) {
+        $message .= "\n📍 Provinsi: " . $order->get_billing_state();
+    }
+    if ( $order->get_billing_postcode() ) {
+        $message .= "\n📮 Kode Pos: " . $order->get_billing_postcode();
+    }
+    
+    $message .= "\n\n_*Terima kasih atas pesanannya!*_";
+    
+    // ========== SOLUSI: Gunakan rawurlencode() ========== //
+    $encoded_message = rawurlencode( $message );
+    
+    // Pastikan newlines bekerja di WhatsApp
+    $encoded_message = str_replace( '%0D%0A', '%0A', $encoded_message );
+    $encoded_message = str_replace( '%0A', '%0A', $encoded_message ); // Consistency
+    
+    return $encoded_message;
+}
+
+/**
+ * Get product variation data from order item
+ */
+private function get_product_variation_data( $item ) {
+    $variation_data = array();
+    
+    // Method 1: Get from item meta (WooCommerce standard)
+    $item_meta_data = $item->get_meta_data();
+    
+    foreach ( $item_meta_data as $meta ) {
+        $meta_data = $meta->get_data();
+        $key = $meta_data['key'];
+        $value = $meta_data['value'];
+        
+        // Skip internal meta keys (yang dimulai dengan underscore)
+        if ( substr( $key, 0, 1 ) === '_' ) {
+            continue;
         }
         
-        $order_total = $order->get_total();
-        $formatted_order_total = number_format( $order_total, 0, ',', '.' );
+        // Skip meta keys yang tidak perlu
+        $skip_keys = array(
+            '_reduced_stock',
+            '_qty',
+            '_tax_class',
+            '_product_id',
+            '_variation_id',
+            '_line_subtotal',
+            '_line_total',
+            '_line_subtotal_tax',
+            '_line_tax',
+            '_line_tax_data'
+        );
         
-        $message .= " Total: Rp {$formatted_order_total} ";
-        $message .= " Order ID: " . $order->get_order_number();
-        $message .= " Nama: " . $order->get_billing_first_name() . " " . $order->get_billing_last_name();
-        $message .= " Email: " . $order->get_billing_email();
-        $message .= " Telepon: " . $order->get_billing_phone();
-        $message .= " Alamat: " . $order->get_billing_address_1();
+        if ( in_array( $key, $skip_keys ) ) {
+            continue;
+        }
         
-        return $message;
+        // Format attribute keys (ubah 'pa_color' menjadi 'Warna', dll)
+        $formatted_key = $this->format_attribute_key( $key );
+        
+        if ( ! empty( $value ) ) {
+            $variation_data[] = "{$formatted_key}: {$value}";
+        }
     }
+    
+    // Method 2: Get from product variation (jika available)
+    $product = $item->get_product();
+    if ( $product && $product->is_type( 'variation' ) ) {
+        $attributes = $product->get_attributes();
+        
+        foreach ( $attributes as $attribute_key => $attribute_value ) {
+            if ( ! empty( $attribute_value ) ) {
+                $formatted_key = $this->format_attribute_key( $attribute_key );
+                $formatted_value = $this->format_attribute_value( $attribute_value, $attribute_key );
+                $variation_data[] = "{$formatted_key}: {$formatted_value}";
+            }
+        }
+    }
+    
+    // Remove duplicates
+    $variation_data = array_unique( $variation_data );
+    
+    return $variation_data;
+}
+
+/**
+ * Format attribute key to readable format
+ */
+private function format_attribute_key( $key ) {
+    // Remove 'attribute_' prefix jika ada
+    $key = str_replace( 'attribute_', '', $key );
+    
+    // Remove 'pa_' prefix (untuk product attributes)
+    $key = str_replace( 'pa_', '', $key );
+    
+    // Convert slug to readable format
+    $key = str_replace( array( '-', '_' ), ' ', $key );
+    $key = ucwords( $key );
+    
+    // Custom replacements untuk keys umum
+    $replacements = array(
+        'size' => 'Ukuran',
+        'color' => 'Warna',
+        'colour' => 'Warna',
+        'gender' => 'Gender',
+        'jenis kelamin' => 'Gender',
+        'material' => 'Material',
+        'bahan' => 'Material',
+        'type' => 'Tipe',
+        'model' => 'Model',
+        'pattern' => 'Pola',
+        'pola' => 'Pola',
+        'style' => 'Style',
+        'gaya' => 'Style',
+        'length' => 'Panjang',
+        'panjang' => 'Panjang',
+        'width' => 'Lebar',
+        'lebar' => 'Lebar',
+        'height' => 'Tinggi',
+        'tinggi' => 'Tinggi',
+        'weight' => 'Berat',
+        'berat' => 'Berat'
+    );
+    
+    if ( isset( $replacements[ strtolower( $key ) ] ) ) {
+        $key = $replacements[ strtolower( $key ) ];
+    }
+    
+    return $key;
+}
+
+/**
+ * Format attribute value to readable format
+ */
+private function format_attribute_value( $value, $attribute_key = '' ) {
+    // Jika value adalah slug, convert ke readable format
+    $value = str_replace( array( '-', '_' ), ' ', $value );
+    $value = ucwords( $value );
+    
+    // Custom replacements untuk values umum
+    $replacements = array(
+        'male' => 'Pria',
+        'female' => 'Wanita',
+        'pria' => 'Pria',
+        'wanita' => 'Wanita',
+        'unisex' => 'Unisex',
+        'small' => 'Small (S)',
+        'medium' => 'Medium (M)',
+        'large' => 'Large (L)',
+        'x-large' => 'X-Large (XL)',
+        'xx-large' => 'XX-Large (XXL)',
+        's' => 'Small (S)',
+        'm' => 'Medium (M)',
+        'l' => 'Large (L)',
+        'xl' => 'X-Large (XL)',
+        'xxl' => 'XX-Large (XXL)'
+    );
+    
+    if ( isset( $replacements[ strtolower( $value ) ] ) ) {
+        $value = $replacements[ strtolower( $value ) ];
+    }
+    
+    return $value;
+}
 
     /**
      * Output for the order received page.
