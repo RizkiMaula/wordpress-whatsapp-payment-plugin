@@ -138,13 +138,13 @@ private function generate_whatsapp_message( $order ) {
         $total = $item->get_total();
         $formatted_total = number_format( $total, 0, ',', '.' );
         
-        $message .= "• {$product_name} x{$quantity} - Rp {$formatted_total}\n";
+        $message .= " • {$product_name} x{$quantity} - Rp {$formatted_total}\n ";
         
         // Tampilkan variant product
         $variation_data = $this->get_product_variation_data( $item );
         if ( ! empty( $variation_data ) ) {
             foreach ( $variation_data as $variant ) {
-                $message .= "  └─ {$variant}\n";
+                $message .= " {$variant}\n";
             }
         }
     }
@@ -152,25 +152,25 @@ private function generate_whatsapp_message( $order ) {
     $order_total = $order->get_total();
     $formatted_order_total = number_format( $order_total, 0, ',', '.' );
     
-    $message .= "\n💰 *Total: Rp {$formatted_order_total}*";
-    $message .= "\n\n📦 *Detail Order:*";
-    $message .= "\n🆔 Order ID: " . $order->get_order_number();
-    $message .= "\n🌐 Website: " . get_site_url();
+    $message .= "\n *Total: Rp {$formatted_order_total}*";
+    $message .= "\n\n *Detail Order:*";
+    $message .= "\n Order ID: " . $order->get_order_number();
+    $message .= "\n Website: " . get_site_url();
     
-    $message .= "\n\n👤 *Data Customer:*";
-    $message .= "\n📛 Nama: " . $order->get_billing_first_name() . " " . $order->get_billing_last_name();
-    $message .= "\n📧 Email: " . $order->get_billing_email();
-    $message .= "\n📞 Telepon: " . $order->get_billing_phone();
-    $message .= "\n🏠 Alamat: " . $order->get_billing_address_1();
+    $message .= "\n\n *Data Customer:*";
+    $message .= "\n Nama: " . $order->get_billing_first_name() . " " . $order->get_billing_last_name();
+    $message .= "\n Email: " . $order->get_billing_email();
+    $message .= "\n Telepon: " . $order->get_billing_phone();
+    $message .= "\n Alamat: " . $order->get_billing_address_1();
     
     if ( $order->get_billing_city() ) {
-        $message .= "\n🏙️ Kota: " . $order->get_billing_city();
+        $message .= "\n Kota: " . $order->get_billing_city();
     }
     if ( $order->get_billing_state() ) {
-        $message .= "\n📍 Provinsi: " . $order->get_billing_state();
+        $message .= "\n Provinsi: " . $order->get_billing_state();
     }
     if ( $order->get_billing_postcode() ) {
-        $message .= "\n📮 Kode Pos: " . $order->get_billing_postcode();
+        $message .= "\n Kode Pos: " . $order->get_billing_postcode();
     }
     
     $message .= "\n\n_*Terima kasih atas pesanannya!*_";
